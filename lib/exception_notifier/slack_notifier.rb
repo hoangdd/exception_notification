@@ -13,6 +13,12 @@ module ExceptionNotifier
         webhook_url = options.fetch(:webhook_url)
         @message_opts = options.fetch(:additional_parameters, {})
         @color = @message_opts.delete(:color) { 'danger' }
+
+        # Channel control
+        @channels = options.fetch(:channels)
+        @default_channel = @channels["default"] || "#general"
+        options[:channel] = @default_channel)
+
         @notifier = Slack::Notifier.new webhook_url, options
       rescue
         @notifier = nil
@@ -57,6 +63,7 @@ module ExceptionNotifier
       attchs = [color: @color, text: text, fields: fields, mrkdwn_in: %w(text fields)]
 
       if valid?
+        @message_opts[:channel] = @channels[exception.class.name]|| @default_channel
         send_notice(exception, options, clean_message, @message_opts.merge(attachments: attchs)) do |msg, message_opts|
           @notifier.ping '', message_opts
         end
