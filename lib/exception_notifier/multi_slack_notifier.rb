@@ -1,7 +1,10 @@
 module ExceptionNotifier
   class MultiSlackNotifier < SlackNotifier
     include ExceptionNotifier::BacktraceCleaner
- 
+
+    FILE_PATH_REGEX = Regexp.new("([^ \n,]*/[^ ,\n]*)")
+    SCOPE_PATH_REGEX = Regexp.new("({.*?})")
+
     def initialize(options)
       super
       begin
@@ -19,7 +22,15 @@ module ExceptionNotifier
       fields = []
  
       text = exception_name
-      message_text = ">>> " + exception.message.gsub("`", "'") + "\n\n"
+      exception_message = exception.message.gsub("`", "'")
+      matches = exception_message.scan(FILE_PATH_REGEX)
+      matches += exception_message.scan(SCOPE_PATH_REGEX)
+      matches.uniq.each do |m|
+        m1 = m.join('/')
+        exception_message.gsub!( m1, "`#{m1}`")
+      end
+
+      message_text = ">>> " + exception_message + "\n\n"
  
       if options[:env].nil?
         data = options[:data] || {}
