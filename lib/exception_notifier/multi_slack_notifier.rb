@@ -47,13 +47,17 @@ module ExceptionNotifier
 
         path_parameters = env["action_dispatch.request.path_parameters"]
         if path_parameters.present?
-          env_text += "*Path parameters*:\n ```#{path_parameters.except(:controller, :action).to_json}``` \n"
+          parameters1 = path_parameters.except(:controller, :action)
+          env_text += "*Path parameters*:\n ```#{parameters1.to_json}``` \n" if parameters1.present?
         end
 
         request_parameters = env["action_dispatch.request.request_parameters"]
         if request_parameters.present?
-          env_text += "*Request parameters*:\n ```#{JSON.pretty_generate request_parameters.except(:utf8, :authenticity_token, :commit)}``` \n"
+          parameters2 = request_parameters.except(:utf8, :authenticity_token, :commit)
+          env_text += "*Request parameters*:\n ```#{JSON.pretty_generate parameters2}``` \n" if parameters2.present?
         end
+
+        env_text += "*User-Agent*:\n ```#{env["HTTP_USER_AGENT"]}```"
 
         env_text += "\n"
       end
