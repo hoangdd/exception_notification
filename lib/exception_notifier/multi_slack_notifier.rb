@@ -1,3 +1,4 @@
+require 'json'
 module ExceptionNotifier
   class MultiSlackNotifier < SlackNotifier
     include ExceptionNotifier::BacktraceCleaner
@@ -42,7 +43,18 @@ module ExceptionNotifier
         kontroller = env['action_controller.instance']
         request = "`#{env['REQUEST_METHOD']}` <#{env['REQUEST_URI']}>"
         env_text = "*Request*: #{request}\n"
-        env_text += "*Process*: `#{kontroller.class.name}##{kontroller.action_name}`" if kontroller
+        env_text += "*Process*: `#{kontroller.class.name}##{kontroller.action_name}`\n" if kontroller
+
+        path_parameters = env["action_dispatch.request.path_parameters"]
+        if path_parameters.present?
+          env_text += "*Path parameters*:\n ```#{path_parameters.except(:controller, :action).to_json}``` \n"
+        end
+
+        request_parameters = env["action_dispatch.request.request_parameters"]
+        if request_parameters.present?
+          env_text += "*Request parameters*:\n ```#{JSON.pretty_generate request_parameters.except(:utf8, :authenticity_token, :commit)}``` \n"
+        end
+
         env_text += "\n"
       end
  
@@ -52,14 +64,17 @@ module ExceptionNotifier
  
       if exception.backtrace
         backtrace = exception.backtrace.first(@backtrace_lines)
-        formatted_backtrace = "```#{backtrace.join("\n")}```"
         gem_paths = ENV["GEM_PATH"].split(':')
         gem_paths.each do |path|
-          formatted_backtrace.gsub! path.to_s, "GEM_PATH"
+          backtrace.each do |str|
+            str.gsub! path.to_s, "GEM_PATH"
+          end
         end
-        formatted_backtrace.gsub! Rails.root.to_s, ""
+
+        formatted_backtrace = "```#{backtrace.select{|e| !e.include?("GEM_PATH")}.join("\n")}```"
+        formatted_backtrace.gsub! Rails.root.to_s + "/", ""
  
-        fields.push({ title: 'Backtrace', value: formatted_backtrace, short: true })
+        fields.push({ title: 'Backtrace', value: formatted_backtrace, large: true })
       end
  
       unless data.empty?
