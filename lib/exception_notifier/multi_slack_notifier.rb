@@ -57,8 +57,10 @@ module ExceptionNotifier
           env_text += "*Request parameters*:\n ```#{JSON.pretty_generate parameters2}``` \n" if parameters2.present?
         end
 
-        env_text += "*User-Agent*:\n ```#{env["HTTP_USER_AGENT"]}```"
+        format = env["action_dispatch.request.formats"]
+        env_text += "*Request formats*:\n ```#{format.to_json}``` \n" if format.present?
 
+        env_text += "*User-Agent*:\n ```#{env["HTTP_USER_AGENT"]}```"
         env_text += "\n"
       end
  
